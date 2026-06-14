@@ -18,7 +18,7 @@ The scanner remains static and does not execute scanned files. Configuration is 
 
 SARIF is generated from the same `ScanResult` used by text and JSON output. Critical and high findings map to SARIF `error`, medium maps to `warning`, and low maps to `note`.
 
-The workflow uses `github/codeql-action/upload-sarif@v3` after `node dist/cli.js scan . --sarif skillguard.sarif --fail-on HIGH`.
+The workflow uses `github/codeql-action/upload-sarif@v4` after `node dist/cli.js scan . --sarif skillguard.sarif --fail-on HIGH`.
 
 ## Verification
 

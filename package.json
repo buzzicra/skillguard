@@ -1,6 +1,6 @@
 {
-  "name": "skillguard",
-  "version": "0.1.0",
+  "name": "@buzzicra/skillguard",
+  "version": "0.1.1",
   "description": "Scan AI agent skills, MCP configs, and coding-agent instruction files for risky behavior.",
   "type": "module",
   "bin": {
@@ -36,6 +36,17 @@
   ],
   "author": "buzzicra",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buzzicra/skillguard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/buzzicra/skillguard/issues"
+  },
+  "homepage": "https://github.com/buzzicra/skillguard#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },

@@ -3,7 +3,7 @@
 Scan AI agent skills, MCP configs, and coding-agent instruction files for risky behavior.
 
 ```bash
-npx skillguard scan
+npx @buzzicra/skillguard scan
 ```
 
 SkillGuard is built for the new messy layer around AI coding: `AGENTS.md`, `CLAUDE.md`, `SKILL.md`, MCP configs, Cursor rules, and package scripts. It looks for patterns that can leak secrets, bypass permissions, or run unsafe shell commands, then emits text, JSON, or SARIF for GitHub code scanning.
@@ -31,7 +31,7 @@ AI agent configs are executable intent. A bad skill can tell an agent to read se
 After package publish:
 
 ```bash
-npm install -g skillguard
+npm install -g @buzzicra/skillguard
 skillguard scan
 ```
 
@@ -95,7 +95,7 @@ It runs:
 - `npm run build`
 - `npm audit --audit-level=high`
 - `node dist/cli.js scan . --sarif skillguard.sarif --fail-on HIGH`
-- `github/codeql-action/upload-sarif@v3`
+- `github/codeql-action/upload-sarif@v4`
 
 The workflow uses least-privilege permissions:
 
