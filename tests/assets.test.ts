@@ -6,7 +6,9 @@ describe('repository assets', () => {
     const workflow = await readFile('.github/workflows/skillguard.yml', 'utf8');
 
     expect(workflow).toContain('node dist/cli.js scan . --sarif skillguard.sarif --fail-on HIGH');
-    expect(workflow).toContain('github/codeql-action/upload-sarif@v3');
+    expect(workflow).toContain('actions/checkout@v5');
+    expect(workflow).toContain('actions/setup-node@v5');
+    expect(workflow).toContain('github/codeql-action/upload-sarif@v4');
     expect(workflow).toContain('security-events: write');
   });
 
