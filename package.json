@@ -1,0 +1,48 @@
+{
+  "name": "skillguard",
+  "version": "0.1.0",
+  "description": "Scan AI agent skills, MCP configs, and coding-agent instruction files for risky behavior.",
+  "type": "module",
+  "bin": {
+    "skillguard": "./dist/cli.js"
+  },
+  "files": [
+    ".skillguardignore",
+    "dist",
+    "examples",
+    "README.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev": "tsx src/cli.ts",
+    "demo": "npm run build && node dist/cli.js scan examples/bad-skill",
+    "sarif": "npm run build && node dist/cli.js scan . --sarif skillguard.sarif",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "mcp",
+    "security",
+    "scanner",
+    "claude",
+    "codex",
+    "cursor"
+  ],
+  "author": "buzzicra",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.8"
+  }
+}

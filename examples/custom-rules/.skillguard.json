@@ -1,0 +1,12 @@
+{
+  "rules": [
+    {
+      "id": "company-token",
+      "title": "Company token reference",
+      "severity": "high",
+      "category": "secrets",
+      "pattern": "COMPANY_TOKEN",
+      "recommendation": "Move company tokens into a secret manager."
+    }
+  ]
+}

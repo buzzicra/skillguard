@@ -1,0 +1,46 @@
+name: SkillGuard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: skillguard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Scan agent configs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+      - name: Run SkillGuard
+        run: node dist/cli.js scan . --sarif skillguard.sarif --fail-on HIGH
+
+      - name: Upload SkillGuard SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: skillguard.sarif
