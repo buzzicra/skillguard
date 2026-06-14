@@ -38,7 +38,7 @@ export type SarifLog = {
     tool: {
       driver: {
         name: 'SkillGuard';
-        informationUri: 'https://github.com/esenbora/skillguard';
+        informationUri: 'https://github.com/buzzicra/skillguard';
         rules: SarifRule[];
       };
     };
@@ -97,7 +97,7 @@ export const formatSarifReport = (result: ScanResult): SarifLog => ({
       tool: {
         driver: {
           name: 'SkillGuard',
-          informationUri: 'https://github.com/esenbora/skillguard',
+          informationUri: 'https://github.com/buzzicra/skillguard',
           rules: uniqueRules(result.findings),
         },
       },
