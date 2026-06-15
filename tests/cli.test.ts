@@ -1,8 +1,9 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { main } from '../src/cli.js';
+import { isDirectInvocation, main } from '../src/cli.js';
 
 let tempRoots: string[] = [];
 
@@ -52,7 +53,17 @@ describe('main', () => {
     const exitCode = await main(['--version'], io);
 
     expect(exitCode).toBe(0);
-    expect(readStdout()).toContain('0.1.2');
+    expect(readStdout()).toContain('0.1.3');
+  });
+
+  it('detects direct execution through npm bin symlinks', async () => {
+    const root = await makeTempRoot();
+    const cliPath = join(root, 'cli.js');
+    const binPath = join(root, 'skillguard');
+    await writeFile(cliPath, '#!/usr/bin/env node\n');
+    await symlink(cliPath, binPath);
+
+    expect(isDirectInvocation(binPath, pathToFileURL(cliPath).href)).toBe(true);
   });
 
   it('returns a failing exit code when risk meets --fail-on threshold', async () => {

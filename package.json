@@ -1,6 +1,6 @@
 {
   "name": "@buzzicra/skillguard",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Scan AI agent skills, MCP configs, and coding-agent instruction files for risky behavior.",
   "type": "module",
   "bin": {

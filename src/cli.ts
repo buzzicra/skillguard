@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { formatTextReport } from './format.js';
 import { formatSarifReport } from './sarif.js';
 import { scanProject } from './scanner.js';
@@ -39,7 +41,22 @@ Examples:
   skillguard scan . --sarif skillguard.sarif --fail-on HIGH
 `;
 
-const packageVersion = '0.1.2';
+const packageVersion = '0.1.3';
+
+export const isDirectInvocation = (
+  entrypoint: string | undefined = process.argv[1],
+  moduleUrl: string = import.meta.url,
+): boolean => {
+  if (entrypoint === undefined) {
+    return false;
+  }
+
+  try {
+    return realpathSync(entrypoint) === realpathSync(fileURLToPath(moduleUrl));
+  } catch {
+    return false;
+  }
+};
 
 const parseRiskLevel = (value: string): RiskLevel => {
   const normalized = value.toUpperCase();
@@ -155,9 +172,7 @@ export const main = async (
   }
 };
 
-const isDirectRun = import.meta.url === `file://${process.argv[1]}`;
-
-if (isDirectRun) {
+if (isDirectInvocation()) {
   const exitCode = await main();
   process.exitCode = exitCode;
 }
