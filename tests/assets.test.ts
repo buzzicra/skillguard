@@ -78,6 +78,7 @@ describe('repository assets', () => {
     expect(readme).toContain('img.shields.io/github/stars/buzzicra/skillguard');
     expect(readme).toContain('api.star-history.com/svg?repos=buzzicra/skillguard&type=Date');
     expect(readme).toContain('github.com/buzzicra/skillguard/stargazers');
+    expect(readme.indexOf('## Star History')).toBeGreaterThan(readme.indexOf('## License'));
   });
 
   it('ships rule docs and comparison positioning', async () => {

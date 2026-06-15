@@ -23,10 +23,6 @@ Agent configs can tell an AI coding agent to read secrets, call remote URLs, byp
 
 Read next: [rule reference](docs/rules.md), [comparison guide](docs/comparison.md), [threat taxonomy](docs/threats.md), [launch assets](docs/launch/x-thread.md).
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=buzzicra/skillguard&type=Date)](https://www.star-history.com/#buzzicra/skillguard&Date)
-
 ## Quick Demo
 
 Scan intentionally unsafe sample:
@@ -379,3 +375,7 @@ High-confidence findings should be fixed before installing or sharing a skill/co
 ## License
 
 MIT
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=buzzicra/skillguard&type=Date)](https://www.star-history.com/#buzzicra/skillguard&Date)
