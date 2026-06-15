@@ -53,7 +53,7 @@ describe('main', () => {
     const exitCode = await main(['--version'], io);
 
     expect(exitCode).toBe(0);
-    expect(readStdout()).toContain('0.4.0');
+    expect(readStdout()).toContain('0.5.0');
   });
 
   it('detects direct execution through npm bin symlinks', async () => {
@@ -159,6 +159,36 @@ describe('main', () => {
     });
   });
 
+  it('applies strict preset from the CLI', async () => {
+    const root = await makeTempRoot();
+    await writeFile(
+      join(root, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          remote: {
+            url: 'https://mcp.evil.example/sse',
+          },
+        },
+      }),
+    );
+    const { io, readStdout } = makeIo();
+
+    const exitCode = await main(['scan', root, '--preset', 'strict'], io);
+
+    expect(exitCode).toBe(0);
+    expect(readStdout()).toContain('Remote MCP server endpoint');
+  });
+
+  it('rejects unknown presets', async () => {
+    const root = await makeTempRoot();
+    const { io, readStderr } = makeIo();
+
+    const exitCode = await main(['scan', root, '--preset', 'nope'], io);
+
+    expect(exitCode).toBe(2);
+    expect(readStderr()).toContain('Invalid --preset');
+  });
+
   it('initializes a project with config and CI workflow', async () => {
     const root = await makeTempRoot();
     const { io, readStdout } = makeIo();
@@ -167,7 +197,7 @@ describe('main', () => {
 
     expect(exitCode).toBe(0);
     expect(readStdout()).toContain('Created .skillguard.json');
-    expect(await readFile(join(root, '.github/workflows/skillguard.yml'), 'utf8')).toContain('@buzzicra/skillguard');
+    expect(await readFile(join(root, '.github/workflows/skillguard.yml'), 'utf8')).toContain('--preset strict');
   });
 
   it('initializes a pre-commit hook when requested', async () => {
@@ -179,6 +209,7 @@ describe('main', () => {
     expect(exitCode).toBe(0);
     expect(readStdout()).toContain('Created .pre-commit-config.yaml');
     expect(await readFile(join(root, '.pre-commit-config.yaml'), 'utf8')).toContain('--changed-from HEAD --fail-on HIGH');
+    expect(await readFile(join(root, '.pre-commit-config.yaml'), 'utf8')).toContain('--preset strict');
   });
 
   it('rejects scan-only flags on init', async () => {

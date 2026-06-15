@@ -64,7 +64,7 @@ jobs:
           node-version: '20'
 
       - name: Run SkillGuard
-        run: npx @buzzicra/skillguard scan . --sarif skillguard.sarif --fail-on HIGH
+        run: npx @buzzicra/skillguard scan . --preset strict --sarif skillguard.sarif --fail-on HIGH
 
       - name: Upload SkillGuard SARIF
         if: always()
@@ -133,7 +133,7 @@ const preCommitFile = async (root: string): Promise<InitFile> => {
       content: `#!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh" 2>/dev/null || true
 
-npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH
+npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH --preset strict
 `,
     };
   }
@@ -145,7 +145,7 @@ npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH
     hooks:
       - id: skillguard
         name: SkillGuard agent security scan
-        entry: npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH
+        entry: npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH --preset strict
         language: system
         pass_filenames: false
 `,

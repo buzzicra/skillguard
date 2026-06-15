@@ -3,6 +3,8 @@ import { lstat, readdir, readFile, stat } from 'node:fs/promises';
 import { basename, extname, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { isIgnored, loadProjectConfig, type AllowEntry, type ProjectConfig } from './config.js';
+import { analyzeMcpConfig } from './mcp.js';
+import { presetPolicy } from './presets.js';
 import { calculateRisk } from './risk.js';
 import { rules as builtInRules, type Rule } from './rules.js';
 import type { AgentFileType, DiscoveredAgentFile, Finding, ScanOptions, ScanResult, Severity, TextScanInput } from './types.js';
@@ -227,8 +229,9 @@ const allowedByEntry = (finding: Finding, entry: AllowEntry): boolean => {
   return true;
 };
 
-const applyConfig = (finding: Finding, config: ProjectConfig): Finding | undefined => {
-  const severity = config.severityOverrides[finding.id] ?? finding.severity;
+const applyConfig = (finding: Finding, config: ProjectConfig, options: ScanOptions = {}): Finding | undefined => {
+  const policy = presetPolicy(options.preset);
+  const severity = config.severityOverrides[finding.id] ?? policy.severityOverrides[finding.id] ?? finding.severity;
   const configuredFinding: Finding = { ...finding, severity };
 
   if (config.allow.some((entry) => allowedByEntry(configuredFinding, entry))) {
@@ -243,9 +246,10 @@ export const scanText = ({ filePath, content }: TextScanInput, config: ProjectCo
   severityOverrides: {},
   allow: [],
   rules: [],
-}): Finding[] => {
+}, options: ScanOptions = {}): Finding[] => {
   const lines = content.split(/\r?\n/);
-  const activeRules = [...builtInRules, ...customRules(config)];
+  const policy = presetPolicy(options.preset);
+  const activeRules = [...builtInRules, ...customRules(config)].filter((rule) => !policy.disabledRegexRules.includes(rule.id));
 
   return lines.flatMap((line, index) => {
     return activeRules
@@ -263,6 +267,7 @@ export const scanText = ({ filePath, content }: TextScanInput, config: ProjectCo
             recommendation: rule.recommendation,
           },
           config,
+          options,
         );
 
         return finding === undefined ? [] : [finding];
@@ -296,7 +301,18 @@ export const scanProject = async (targetPath: string = process.cwd(), options: S
       continue;
     }
 
-    findings.push(...scanText({ filePath: file.path, content: buffer.toString('utf8') }, config));
+    const content = buffer.toString('utf8');
+    const policy = presetPolicy(options.preset);
+    const mcpFindings = analyzeMcpConfig({
+      filePath: file.path,
+      content,
+      enabledRuleIds: policy.enabledMcpRules,
+    }).flatMap((finding) => {
+      const configuredFinding = applyConfig(finding, config, options);
+      return configuredFinding === undefined ? [] : [configuredFinding];
+    });
+
+    findings.push(...scanText({ filePath: file.path, content }, config, options), ...mcpFindings);
     filesScanned += 1;
   }
 

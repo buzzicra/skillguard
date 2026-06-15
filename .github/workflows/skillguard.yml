@@ -37,7 +37,7 @@ jobs:
       - run: npm audit --audit-level=high
 
       - name: Run SkillGuard
-        run: node dist/cli.js scan . --sarif skillguard.sarif --fail-on HIGH
+        run: node dist/cli.js scan . --preset strict --sarif skillguard.sarif --fail-on HIGH
 
       - name: Upload SkillGuard SARIF
         if: always()

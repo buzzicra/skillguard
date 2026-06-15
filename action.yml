@@ -1,0 +1,43 @@
+name: SkillGuard
+description: Scan AI agent instruction files, skills, MCP configs, and coding-agent rules.
+
+inputs:
+  target:
+    description: Path to scan.
+    required: false
+    default: .
+  fail-on:
+    description: Risk level that should fail the action.
+    required: false
+    default: HIGH
+  sarif:
+    description: SARIF output path.
+    required: false
+    default: skillguard.sarif
+  baseline:
+    description: Optional SkillGuard baseline lockfile path.
+    required: false
+    default: ''
+  preset:
+    description: Rule preset to apply: default, oss, or strict.
+    required: false
+    default: default
+
+runs:
+  using: composite
+  steps:
+    - name: Run SkillGuard
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_SARIF: ${{ inputs.sarif }}
+        INPUT_BASELINE: ${{ inputs.baseline }}
+        INPUT_PRESET: ${{ inputs.preset }}
+      run: |
+        set -euo pipefail
+        args=(scan "$INPUT_TARGET" --preset "$INPUT_PRESET" --sarif "$INPUT_SARIF" --fail-on "$INPUT_FAIL_ON")
+        if [ -n "$INPUT_BASELINE" ]; then
+          args+=(--baseline "$INPUT_BASELINE")
+        fi
+        npx -y @buzzicra/skillguard@0.5.0 "${args[@]}"

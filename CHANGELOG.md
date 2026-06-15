@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Added structured MCP config analysis for unpinned package launchers, secret env exposure, dangerous commands, remote endpoints, and broad filesystem mounts.
+- Added `--preset default|oss|strict` for scan, inventory, and baseline workflows.
+- Added reusable `action.yml` so repos can run `uses: buzzicra/skillguard@v0.5.0`.
+- Added launch-day copy assets for X, Hacker News, and Product Hunt.
+
 ## 0.4.0
 
 - Added `skillguard baseline` for lockfile snapshots.

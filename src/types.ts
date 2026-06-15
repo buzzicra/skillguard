@@ -2,6 +2,8 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
 export type RiskLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
+export type RulePreset = 'default' | 'oss' | 'strict';
+
 export type FindingCategory =
   | 'secrets'
   | 'shell'
@@ -47,6 +49,7 @@ export type TextScanInput = {
 
 export type ScanOptions = {
   changedFrom?: string;
+  preset?: RulePreset;
 };
 
 export type AgentFileType =

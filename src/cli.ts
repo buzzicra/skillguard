@@ -15,9 +15,10 @@ import { formatTextReport } from './format.js';
 import { initProject } from './init.js';
 import { formatInventoryReport, inventoryProject } from './inventory.js';
 import { formatMarkdownReport } from './markdown.js';
+import { parseRulePreset } from './presets.js';
 import { formatSarifReport } from './sarif.js';
 import { scanProject } from './scanner.js';
-import type { RiskLevel } from './types.js';
+import type { RiskLevel, RulePreset, ScanOptions } from './types.js';
 import { packageVersion } from './version.js';
 
 type CliOptions = {
@@ -28,6 +29,7 @@ type CliOptions = {
   markdownPath?: string;
   failOn?: RiskLevel;
   changedFrom?: string;
+  preset?: RulePreset;
   baselinePath?: string;
   outputPath?: string;
   dryRun?: boolean;
@@ -50,11 +52,11 @@ const riskOrder: Record<RiskLevel, number> = {
 const usage = `SkillGuard
 
 Usage:
-  skillguard scan [path] [--json] [--sarif <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>]
+  skillguard scan [path] [--json] [--sarif <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>] [--preset <default|oss|strict>]
   skillguard scan [path] [--markdown <file>]
   skillguard scan [path] [--baseline <skillguard.lock.json>]
-  skillguard baseline [path] [--output <skillguard.lock.json>]
-  skillguard inventory [path] [--json] [--changed-from <git-ref>]
+  skillguard baseline [path] [--output <skillguard.lock.json>] [--preset <default|oss|strict>]
+  skillguard inventory [path] [--json] [--changed-from <git-ref>] [--preset <default|oss|strict>]
   skillguard init [path] [--dry-run] [--force] [--pre-commit]
   skillguard --version
   skillguard --help
@@ -63,6 +65,7 @@ Examples:
   skillguard scan
   skillguard scan . --fail-on HIGH
   skillguard scan . --changed-from origin/main --fail-on HIGH
+  skillguard scan . --preset strict
   skillguard baseline . --output skillguard.lock.json
   skillguard scan . --baseline skillguard.lock.json
   skillguard inventory . --json
@@ -118,6 +121,7 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
   let markdownPath: string | undefined;
   let failOn: RiskLevel | undefined;
   let changedFrom: string | undefined;
+  let preset: RulePreset | undefined;
   let baselinePath: string | undefined;
   let outputPath: string | undefined;
   let dryRun = false;
@@ -144,6 +148,18 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
 
     if (command === 'init' && arg?.startsWith('--') === true) {
       throw new Error(`Unknown option: ${arg}`);
+    }
+
+    if (arg === '--preset') {
+      const value = rest[index + 1];
+
+      if (value === undefined) {
+        throw new Error('--preset requires default, oss, or strict');
+      }
+
+      preset = parseRulePreset(value);
+      index += 1;
+      continue;
     }
 
     if (arg === '--json') {
@@ -258,6 +274,7 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
     ...(markdownPath === undefined ? {} : { markdownPath }),
     ...(failOn === undefined ? {} : { failOn }),
     ...(changedFrom === undefined ? {} : { changedFrom }),
+    ...(preset === undefined ? {} : { preset }),
     ...(baselinePath === undefined ? {} : { baselinePath }),
     ...(outputPath === undefined ? {} : { outputPath }),
     dryRun,
@@ -295,8 +312,13 @@ export const main = async (
       return 0;
     }
 
+    const scanOptions: ScanOptions = {
+      ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
+      ...(options.preset === undefined ? {} : { preset: options.preset }),
+    };
+
     if (options.command === 'baseline') {
-      const baseline = await buildBaseline(options.targetPath);
+      const baseline = await buildBaseline(options.targetPath, scanOptions);
 
       if (options.outputPath !== undefined) {
         await writeBaseline(baseline, options.outputPath);
@@ -309,22 +331,16 @@ export const main = async (
     }
 
     if (options.command === 'inventory') {
-      const result = await inventoryProject(options.targetPath, {
-        ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
-      });
+      const result = await inventoryProject(options.targetPath, scanOptions);
       io.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${formatInventoryReport(result)}\n`);
       return 0;
     }
 
-    const result = await scanProject(options.targetPath, {
-      ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
-    });
+    const result = await scanProject(options.targetPath, scanOptions);
     const comparison =
       options.baselinePath === undefined
         ? undefined
-        : compareBaselines(await readBaseline(options.baselinePath), await buildBaseline(options.targetPath, {
-            ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
-          }));
+        : compareBaselines(await readBaseline(options.baselinePath), await buildBaseline(options.targetPath, scanOptions));
 
     if (options.sarifPath !== undefined) {
       await writeFile(options.sarifPath, `${JSON.stringify(formatSarifReport(result), null, 2)}\n`);

@@ -8,6 +8,7 @@ Security scanner for AI agent instruction files, skills, MCP configs, and coding
 
 ```bash
 npx @buzzicra/skillguard scan .
+npx @buzzicra/skillguard scan . --preset strict
 npx @buzzicra/skillguard inventory .
 npx @buzzicra/skillguard baseline . --output skillguard.lock.json
 ```
@@ -47,6 +48,12 @@ Scan only changed agent files in a PR branch:
 npx @buzzicra/skillguard scan . --changed-from origin/main --fail-on HIGH
 ```
 
+Run the strict launch preset for MCP-heavy repos:
+
+```bash
+npx @buzzicra/skillguard scan . --preset strict --fail-on HIGH
+```
+
 Create and enforce a trust baseline:
 
 ```bash
@@ -64,16 +71,18 @@ npx @buzzicra/skillguard init --pre-commit
 
 - Finds risky agent behavior in files normal dependency scanners do not understand.
 - Runs locally with no network calls from the scanner.
+- Parses MCP JSON for unpinned package launchers, secret env exposure, remote servers, and broad filesystem mounts.
 - Emits text, JSON, Markdown, and SARIF.
 - Works in CI and uploads SARIF to GitHub code scanning.
 - Inventories the repo's agent surface before scanning.
 - Supports PR-mode scans with `--changed-from <git-ref>`.
 - Creates lockfile baselines and detects trust drift over time.
+- Supports `default`, `oss`, and `strict` presets for different false-positive budgets.
 - Supports repo-specific ignores, allow rules, severity overrides, and custom regex rules.
 
 ## Direction
 
-SkillGuard is intentionally narrower than broad agent-security platforms. The goal is to be the npm-native, no-token, non-executing security gate for checked-in agent instructions. See [competitor signals](docs/research/2026-06-15-agent-security-competitors.md), the [v0.3 differentiation plan](docs/plans/2026-06-15-skillguard-v0.3-differentiation.md), and the [threat taxonomy](docs/threats.md).
+SkillGuard is intentionally narrower than broad agent-security platforms. The goal is to be the npm-native, no-token, non-executing security gate for checked-in agent instructions. See [competitor signals](docs/research/2026-06-15-agent-security-competitors.md), the [v0.3 differentiation plan](docs/plans/2026-06-15-skillguard-v0.3-differentiation.md), the [v0.5 launch hardening plan](docs/plans/2026-06-15-skillguard-v0.5-launch-hardening.md), and the [threat taxonomy](docs/threats.md).
 
 ## What It Finds
 
@@ -88,6 +97,10 @@ SkillGuard is intentionally narrower than broad agent-security platforms. The go
 | Dynamic code execution | High | `eval(...)`, `Function(...)` |
 | Broad filesystem access | Medium | `read all files` |
 | Untrusted network call | Medium | `fetch("https://...")` |
+| Unpinned MCP package installer | High | `"command": "npx", "args": ["-y", "@vendor/server"]` |
+| MCP secret env exposure | High | `"env": { "OPENAI_API_KEY": "..." }` |
+| Remote MCP server endpoint | Medium | `"url": "https://mcp.example/sse"` |
+| Broad MCP filesystem argument | High | `"args": ["--root", "/"]` |
 
 ## Install
 
@@ -107,10 +120,10 @@ skillguard scan .
 ## Usage
 
 ```bash
-skillguard scan [path] [--json] [--sarif <file>] [--markdown <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>]
+skillguard scan [path] [--json] [--sarif <file>] [--markdown <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>] [--preset <default|oss|strict>]
 skillguard scan [path] [--baseline <skillguard.lock.json>]
-skillguard baseline [path] [--output <skillguard.lock.json>]
-skillguard inventory [path] [--json] [--changed-from <git-ref>]
+skillguard baseline [path] [--output <skillguard.lock.json>] [--preset <default|oss|strict>]
+skillguard inventory [path] [--json] [--changed-from <git-ref>] [--preset <default|oss|strict>]
 skillguard init [path] [--dry-run] [--force] [--pre-commit]
 skillguard --version
 ```
@@ -122,6 +135,7 @@ skillguard scan
 skillguard scan ~/.claude/skills --json
 skillguard scan . --fail-on HIGH
 skillguard scan . --changed-from origin/main --fail-on HIGH
+skillguard scan . --preset strict --fail-on HIGH
 skillguard baseline . --output skillguard.lock.json
 skillguard scan . --baseline skillguard.lock.json
 skillguard inventory . --json
@@ -131,6 +145,36 @@ skillguard init --dry-run --pre-commit
 ```
 
 ## GitHub Actions
+
+Use the reusable action:
+
+```yaml
+name: SkillGuard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  skillguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: buzzicra/skillguard@v0.5.0
+        with:
+          preset: strict
+          fail-on: HIGH
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: skillguard.sarif
+```
 
 `skillguard init` writes:
 
@@ -163,7 +207,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '20'
-      - run: npx @buzzicra/skillguard scan . --sarif skillguard.sarif --fail-on HIGH
+      - run: npx @buzzicra/skillguard scan . --preset strict --sarif skillguard.sarif --fail-on HIGH
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
@@ -201,6 +245,20 @@ skillguard scan . --changed-from origin/main --fail-on HIGH
 ```
 
 This keeps mature repos usable when old warnings exist but new PRs should not add risk.
+
+## Presets
+
+Use presets to tune signal:
+
+- `default`: high-confidence local checks and high-confidence MCP checks.
+- `oss`: default plus remote MCP endpoint detection for public repos.
+- `strict`: oss plus broad MCP filesystem argument checks and stricter review severity for selected patterns.
+
+```bash
+skillguard scan . --preset strict
+skillguard inventory . --preset strict --json
+skillguard baseline . --preset strict --output skillguard.lock.json
+```
 
 ## Baseline Drift
 

@@ -30,7 +30,9 @@ describe('initProject', () => {
     ]);
     expect(await readFile(join(root, '.skillguard.json'), 'utf8')).toContain('"severityOverrides"');
     expect(await readFile(join(root, '.skillguardignore'), 'utf8')).toContain('examples/**');
-    expect(await readFile(join(root, '.github/workflows/skillguard.yml'), 'utf8')).toContain('npx @buzzicra/skillguard scan . --sarif skillguard.sarif --fail-on HIGH');
+    expect(await readFile(join(root, '.github/workflows/skillguard.yml'), 'utf8')).toContain(
+      'npx @buzzicra/skillguard scan . --preset strict --sarif skillguard.sarif --fail-on HIGH',
+    );
   });
 
   it('does not overwrite existing files unless force is enabled', async () => {
@@ -64,6 +66,7 @@ describe('initProject', () => {
 
     expect(result.created).toContain('.pre-commit-config.yaml');
     expect(await readFile(join(root, '.pre-commit-config.yaml'), 'utf8')).toContain('npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH');
+    expect(await readFile(join(root, '.pre-commit-config.yaml'), 'utf8')).toContain('--preset strict');
   });
 
   it('uses Husky when the project already has a Husky stack', async () => {
@@ -74,6 +77,7 @@ describe('initProject', () => {
 
     expect(result.created).toContain('.husky/pre-commit');
     expect(await readFile(join(root, '.husky/pre-commit'), 'utf8')).toContain('--changed-from HEAD --fail-on HIGH');
+    expect(await readFile(join(root, '.husky/pre-commit'), 'utf8')).toContain('--preset strict');
     expect((await stat(join(root, '.husky/pre-commit'))).mode & 0o111).toBeGreaterThan(0);
   });
 });
