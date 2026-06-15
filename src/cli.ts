@@ -1,7 +1,16 @@
 #!/usr/bin/env node
 import { realpathSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  buildBaseline,
+  compareBaselines,
+  formatBaselineComparison,
+  formatBaselineReport,
+  readBaseline,
+  writeBaseline,
+} from './baseline.js';
 import { formatTextReport } from './format.js';
 import { initProject } from './init.js';
 import { formatInventoryReport, inventoryProject } from './inventory.js';
@@ -9,15 +18,18 @@ import { formatMarkdownReport } from './markdown.js';
 import { formatSarifReport } from './sarif.js';
 import { scanProject } from './scanner.js';
 import type { RiskLevel } from './types.js';
+import { packageVersion } from './version.js';
 
 type CliOptions = {
-  command: 'scan' | 'inventory' | 'init' | 'help' | 'version';
+  command: 'scan' | 'inventory' | 'baseline' | 'init' | 'help' | 'version';
   targetPath: string;
   json: boolean;
   sarifPath?: string;
   markdownPath?: string;
   failOn?: RiskLevel;
   changedFrom?: string;
+  baselinePath?: string;
+  outputPath?: string;
   dryRun?: boolean;
   force?: boolean;
   preCommit?: boolean;
@@ -40,6 +52,8 @@ const usage = `SkillGuard
 Usage:
   skillguard scan [path] [--json] [--sarif <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>]
   skillguard scan [path] [--markdown <file>]
+  skillguard scan [path] [--baseline <skillguard.lock.json>]
+  skillguard baseline [path] [--output <skillguard.lock.json>]
   skillguard inventory [path] [--json] [--changed-from <git-ref>]
   skillguard init [path] [--dry-run] [--force] [--pre-commit]
   skillguard --version
@@ -49,14 +63,14 @@ Examples:
   skillguard scan
   skillguard scan . --fail-on HIGH
   skillguard scan . --changed-from origin/main --fail-on HIGH
+  skillguard baseline . --output skillguard.lock.json
+  skillguard scan . --baseline skillguard.lock.json
   skillguard inventory . --json
   skillguard scan ~/.claude/skills --json
   skillguard scan . --sarif skillguard.sarif --fail-on HIGH
   skillguard scan . --markdown skillguard-report.md
   skillguard init --pre-commit
 `;
-
-const packageVersion = '0.3.0';
 
 export const isDirectInvocation = (
   entrypoint: string | undefined = process.argv[1],
@@ -94,7 +108,7 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
 
   const [command, ...rest] = argv;
 
-  if (command !== 'scan' && command !== 'inventory' && command !== 'init') {
+  if (command !== 'scan' && command !== 'inventory' && command !== 'baseline' && command !== 'init') {
     throw new Error(`Unknown command: ${command ?? ''}`);
   }
 
@@ -104,6 +118,8 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
   let markdownPath: string | undefined;
   let failOn: RiskLevel | undefined;
   let changedFrom: string | undefined;
+  let baselinePath: string | undefined;
+  let outputPath: string | undefined;
   let dryRun = false;
   let force = false;
   let preCommit = false;
@@ -147,6 +163,38 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
       }
 
       failOn = parseRiskLevel(value);
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--baseline') {
+      if (command !== 'scan') {
+        throw new Error(`Unknown option: ${arg}`);
+      }
+
+      const value = rest[index + 1];
+
+      if (value === undefined) {
+        throw new Error('--baseline requires a file path');
+      }
+
+      baselinePath = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--output') {
+      if (command !== 'baseline') {
+        throw new Error(`Unknown option: ${arg}`);
+      }
+
+      const value = rest[index + 1];
+
+      if (value === undefined) {
+        throw new Error('--output requires a file path');
+      }
+
+      outputPath = value;
       index += 1;
       continue;
     }
@@ -210,6 +258,8 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
     ...(markdownPath === undefined ? {} : { markdownPath }),
     ...(failOn === undefined ? {} : { failOn }),
     ...(changedFrom === undefined ? {} : { changedFrom }),
+    ...(baselinePath === undefined ? {} : { baselinePath }),
+    ...(outputPath === undefined ? {} : { outputPath }),
     dryRun,
     force,
     preCommit,
@@ -245,6 +295,19 @@ export const main = async (
       return 0;
     }
 
+    if (options.command === 'baseline') {
+      const baseline = await buildBaseline(options.targetPath);
+
+      if (options.outputPath !== undefined) {
+        await writeBaseline(baseline, options.outputPath);
+        io.stdout.write(`${formatBaselineReport(baseline)}\nCreated ${basename(options.outputPath)}\n`);
+        return 0;
+      }
+
+      io.stdout.write(`${JSON.stringify(baseline, null, 2)}\n`);
+      return 0;
+    }
+
     if (options.command === 'inventory') {
       const result = await inventoryProject(options.targetPath, {
         ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
@@ -256,17 +319,34 @@ export const main = async (
     const result = await scanProject(options.targetPath, {
       ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
     });
+    const comparison =
+      options.baselinePath === undefined
+        ? undefined
+        : compareBaselines(await readBaseline(options.baselinePath), await buildBaseline(options.targetPath, {
+            ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
+          }));
+
     if (options.sarifPath !== undefined) {
       await writeFile(options.sarifPath, `${JSON.stringify(formatSarifReport(result), null, 2)}\n`);
     }
 
     if (options.markdownPath !== undefined) {
-      await writeFile(options.markdownPath, `${formatMarkdownReport(result)}\n`);
+      await writeFile(options.markdownPath, `${formatMarkdownReport(result, comparison)}\n`);
     }
 
-    io.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${formatTextReport(result)}\n`);
+    const textReport =
+      comparison === undefined ? formatTextReport(result) : `${formatTextReport(result)}\n\n${formatBaselineComparison(comparison)}`;
+    io.stdout.write(
+      options.json
+        ? `${JSON.stringify(comparison === undefined ? result : { ...result, baseline: comparison }, null, 2)}\n`
+        : `${textReport}\n`,
+    );
 
     if (options.failOn !== undefined && riskOrder[result.risk.level] >= riskOrder[options.failOn]) {
+      return 1;
+    }
+
+    if (comparison?.hasDrift === true) {
       return 1;
     }
 

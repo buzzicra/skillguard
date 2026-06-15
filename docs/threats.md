@@ -41,5 +41,7 @@ Instruction files can embed text that attempts to override higher-priority polic
 1. Run `skillguard inventory .` to see the agent surface in the repo.
 2. Run `skillguard scan . --fail-on HIGH` before merging.
 3. Use `skillguard scan . --changed-from origin/main --fail-on HIGH` in PR checks to focus on new agent-surface risk.
-4. Commit allow rules only when the behavior is intentional, reviewed, and scoped to a specific rule/path/evidence fragment.
-5. Keep secret scanning, dependency auditing, sandboxing, and human review in place. SkillGuard is one static guardrail, not a full security program.
+4. Commit `skillguard.lock.json` from `skillguard baseline . --output skillguard.lock.json` after reviewing known agent files.
+5. Use `skillguard scan . --baseline skillguard.lock.json` to catch trust drift.
+6. Commit allow rules only when the behavior is intentional, reviewed, and scoped to a specific rule/path/evidence fragment.
+7. Keep secret scanning, dependency auditing, sandboxing, and human review in place. SkillGuard is one static guardrail, not a full security program.

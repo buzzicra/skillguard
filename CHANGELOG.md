@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Added `skillguard baseline` for lockfile snapshots.
+- Added `scan --baseline <file>` drift detection.
+- Added domain, secret-reference, file-change, and finding drift reports.
+- Added baseline drift output to text, JSON, and Markdown scan reports.
+- Hardened hardcoded-token evidence redaction before reports and baselines store findings.
+
 ## 0.3.0
 
 - Added `skillguard inventory` with text and JSON output.

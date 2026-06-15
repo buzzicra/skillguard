@@ -9,6 +9,7 @@ Security scanner for AI agent instruction files, skills, MCP configs, and coding
 ```bash
 npx @buzzicra/skillguard scan .
 npx @buzzicra/skillguard inventory .
+npx @buzzicra/skillguard baseline . --output skillguard.lock.json
 ```
 
 Agent configs are supply-chain code now. `AGENTS.md`, `CLAUDE.md`, `SKILL.md`, MCP JSON, Cursor rules, and package scripts can tell an AI coding agent to read secrets, call remote URLs, bypass permissions, or run unsafe shell. SkillGuard gives those files a fast static security gate before you install, share, or merge them.
@@ -46,6 +47,13 @@ Scan only changed agent files in a PR branch:
 npx @buzzicra/skillguard scan . --changed-from origin/main --fail-on HIGH
 ```
 
+Create and enforce a trust baseline:
+
+```bash
+npx @buzzicra/skillguard baseline . --output skillguard.lock.json
+npx @buzzicra/skillguard scan . --baseline skillguard.lock.json
+```
+
 Create config and GitHub code-scanning workflow:
 
 ```bash
@@ -60,6 +68,7 @@ npx @buzzicra/skillguard init --pre-commit
 - Works in CI and uploads SARIF to GitHub code scanning.
 - Inventories the repo's agent surface before scanning.
 - Supports PR-mode scans with `--changed-from <git-ref>`.
+- Creates lockfile baselines and detects trust drift over time.
 - Supports repo-specific ignores, allow rules, severity overrides, and custom regex rules.
 
 ## Direction
@@ -99,6 +108,8 @@ skillguard scan .
 
 ```bash
 skillguard scan [path] [--json] [--sarif <file>] [--markdown <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>]
+skillguard scan [path] [--baseline <skillguard.lock.json>]
+skillguard baseline [path] [--output <skillguard.lock.json>]
 skillguard inventory [path] [--json] [--changed-from <git-ref>]
 skillguard init [path] [--dry-run] [--force] [--pre-commit]
 skillguard --version
@@ -111,6 +122,8 @@ skillguard scan
 skillguard scan ~/.claude/skills --json
 skillguard scan . --fail-on HIGH
 skillguard scan . --changed-from origin/main --fail-on HIGH
+skillguard baseline . --output skillguard.lock.json
+skillguard scan . --baseline skillguard.lock.json
 skillguard inventory . --json
 skillguard scan . --sarif skillguard.sarif --fail-on HIGH
 skillguard scan . --markdown skillguard-report.md
@@ -188,6 +201,30 @@ skillguard scan . --changed-from origin/main --fail-on HIGH
 ```
 
 This keeps mature repos usable when old warnings exist but new PRs should not add risk.
+
+## Baseline Drift
+
+Use a baseline when a repo already has reviewed agent files and you want CI to block new trust changes:
+
+```bash
+skillguard baseline . --output skillguard.lock.json
+git add skillguard.lock.json
+```
+
+Then enforce it:
+
+```bash
+skillguard scan . --baseline skillguard.lock.json
+```
+
+Baseline comparison fails when SkillGuard sees:
+
+- new, removed, or changed agent-surface files
+- new or resolved findings
+- new outbound domains
+- new secret references such as `$OPENAI_API_KEY`
+
+Regenerate and review `skillguard.lock.json` only after intentionally accepting drift.
 
 ## Configuration
 

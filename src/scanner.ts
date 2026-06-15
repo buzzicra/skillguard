@@ -97,6 +97,9 @@ const normalizeEvidence = (line: string): string =>
     .trim()
     .replace(/\b(sk-[A-Za-z0-9_-]{8})[A-Za-z0-9_-]+/g, '$1...[redacted]')
     .replace(/\b(ghp_[A-Za-z0-9_]{8})[A-Za-z0-9_]+/g, '$1...[redacted]')
+    .replace(/\b(github_pat_[A-Za-z0-9_]{8})[A-Za-z0-9_]+/g, '$1...[redacted]')
+    .replace(/\b(AIza[0-9A-Za-z_-]{8})[0-9A-Za-z_-]+/g, '$1...[redacted]')
+    .replace(/\b(xox[baprs]-[A-Za-z0-9-]{8})[A-Za-z0-9-]+/g, '$1...[redacted]')
     .slice(0, 180);
 
 const collectFiles = async (root: string, current: string, depth: number): Promise<string[]> => {

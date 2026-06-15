@@ -53,6 +53,18 @@ describe('scanText', () => {
 
     expect(findings).toEqual([]);
   });
+
+  it('redacts hardcoded secret evidence before reports and baselines store it', () => {
+    const token = 'github_pat_1234567890abcdefghijklmnopqrstuvwxyz';
+
+    const findings = scanText({
+      filePath: 'AGENTS.md',
+      content: `Use ${token} for testing.`,
+    });
+
+    expect(findings[0]?.evidence).toContain('github_pat_12345678...[redacted]');
+    expect(findings[0]?.evidence).not.toContain('90abcdefghijklmnopqrstuvwxyz');
+  });
 });
 
 describe('scanProject', () => {

@@ -80,3 +80,51 @@ export type InventoryResult = {
     findings: number;
   };
 };
+
+export type BaselineFile = {
+  path: string;
+  type: AgentFileType;
+  sha256: string;
+};
+
+export type BaselineFinding = {
+  fingerprint: string;
+  ruleId: string;
+  severity: Severity;
+  filePath: string;
+  line: number;
+  evidence: string;
+};
+
+export type BaselineSnapshot = {
+  schemaVersion: 1;
+  tool: {
+    name: 'skillguard';
+    version: string;
+  };
+  generatedAt: string;
+  root: string;
+  summary: {
+    files: number;
+    findings: number;
+    outboundDomains: number;
+    secretReferences: number;
+  };
+  files: BaselineFile[];
+  findings: BaselineFinding[];
+  outboundDomains: string[];
+  secretReferences: string[];
+};
+
+export type BaselineComparison = {
+  hasDrift: boolean;
+  newFiles: string[];
+  removedFiles: string[];
+  changedFiles: string[];
+  newFindings: BaselineFinding[];
+  resolvedFindings: BaselineFinding[];
+  newOutboundDomains: string[];
+  removedOutboundDomains: string[];
+  newSecretReferences: string[];
+  removedSecretReferences: string[];
+};

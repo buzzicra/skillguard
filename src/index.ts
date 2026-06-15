@@ -1,3 +1,11 @@
+export {
+  buildBaseline,
+  compareBaselines,
+  formatBaselineComparison,
+  formatBaselineReport,
+  readBaseline,
+  writeBaseline,
+} from './baseline.js';
 export { formatTextReport } from './format.js';
 export { initProject } from './init.js';
 export { formatInventoryReport, inventoryProject } from './inventory.js';
@@ -8,6 +16,10 @@ export { discoverProjectFiles, scanProject, scanText } from './scanner.js';
 export type { SarifLog } from './sarif.js';
 export type {
   AgentFileType,
+  BaselineComparison,
+  BaselineFile,
+  BaselineFinding,
+  BaselineSnapshot,
   DiscoveredAgentFile,
   Finding,
   InventoryItem,

@@ -1,5 +1,6 @@
+import { formatBaselineComparison } from './baseline.js';
 import { severityRank } from './risk.js';
-import type { Finding, ScanResult, Severity } from './types.js';
+import type { BaselineComparison, Finding, ScanResult, Severity } from './types.js';
 
 const severityLabels: Array<{ key: Severity; label: string }> = [
   { key: 'critical', label: 'Critical' },
@@ -50,7 +51,15 @@ const renderFindings = (result: ScanResult): string[] => {
   ];
 };
 
-export const formatMarkdownReport = (result: ScanResult): string =>
+const renderBaselineComparison = (comparison: BaselineComparison | undefined): string[] => {
+  if (comparison === undefined) {
+    return [];
+  }
+
+  return ['## Baseline Drift', '', '```text', formatBaselineComparison(comparison), '```', ''];
+};
+
+export const formatMarkdownReport = (result: ScanResult, comparison?: BaselineComparison): string =>
   [
     '# SkillGuard Security Report',
     '',
@@ -64,6 +73,7 @@ export const formatMarkdownReport = (result: ScanResult): string =>
     '',
     ...renderFindings(result),
     '',
+    ...renderBaselineComparison(comparison),
     '## Recommended Next Steps',
     '',
     '- Fix critical and high findings before installing or sharing agent configs.',
