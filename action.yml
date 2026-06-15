@@ -40,4 +40,4 @@ runs:
         if [ -n "$INPUT_BASELINE" ]; then
           args+=(--baseline "$INPUT_BASELINE")
         fi
-        npx -y @buzzicra/skillguard@0.5.1 "${args[@]}"
+        npx -y @buzzicra/skillguard@1.0.0 "${args[@]}"

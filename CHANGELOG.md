@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0
+
+- Promoted SkillGuard to the first stable release after full release-check validation.
+- Added `npm run release:check` for test, typecheck, build, audit, self-scan, SARIF, baseline drift, package install, and publish dry-run verification.
+- Updated the reusable GitHub Action to run `@buzzicra/skillguard@1.0.0`.
+
 ## 0.5.1
 
 - Added launch-ready visual assets for README, social previews, and MCP scan screenshots.

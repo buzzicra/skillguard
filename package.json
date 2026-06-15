@@ -1,6 +1,6 @@
 {
   "name": "@buzzicra/skillguard",
-  "version": "0.5.1",
+  "version": "1.0.0",
   "description": "Scan AI agent skills, MCP configs, and coding-agent instruction files for risky behavior.",
   "type": "module",
   "bin": {
@@ -23,6 +23,7 @@
     "postbuild": "node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "release:check": "node scripts/release-check.mjs",
     "dev": "tsx src/cli.ts",
     "demo": "npm run build && node dist/cli.js scan examples/bad-skill",
     "sarif": "npm run build && node dist/cli.js scan . --sarif skillguard.sarif",

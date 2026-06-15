@@ -185,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: buzzicra/skillguard@v0.5.1
+      - uses: buzzicra/skillguard@v1.0.0
         with:
           preset: strict
           fail-on: HIGH

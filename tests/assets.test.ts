@@ -8,8 +8,19 @@ describe('repository assets', () => {
     expect(workflow).toContain('node dist/cli.js scan . --preset strict --sarif skillguard.sarif --fail-on HIGH');
     expect(workflow).toContain('actions/checkout@v5');
     expect(workflow).toContain('actions/setup-node@v5');
+    expect(workflow).toContain('npm run release:check');
     expect(workflow).toContain('github/codeql-action/upload-sarif@v4');
     expect(workflow).toContain('security-events: write');
+  });
+
+  it('ships a release check harness for stable releases', async () => {
+    const packageJson = await readFile('package.json', 'utf8');
+    const releaseCheck = await readFile('scripts/release-check.mjs', 'utf8');
+
+    expect(packageJson).toContain('"release:check": "node scripts/release-check.mjs"');
+    expect(releaseCheck).toContain('mcp-unpinned-npx');
+    expect(releaseCheck).toContain('Baseline drift: detected');
+    expect(releaseCheck).toContain('npm publish');
   });
 
   it('ships a demo lab that intentionally triggers scanner rules', async () => {
@@ -39,7 +50,7 @@ describe('repository assets', () => {
     const action = await readFile('action.yml', 'utf8');
 
     expect(action).toContain('name: SkillGuard');
-    expect(action).toContain('npx -y @buzzicra/skillguard@0.5.1');
+    expect(action).toContain('npx -y @buzzicra/skillguard@1.0.0');
     expect(action).toContain('INPUT_BASELINE');
     expect(action).toContain('INPUT_PRESET');
   });
