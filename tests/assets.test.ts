@@ -68,12 +68,16 @@ describe('repository assets', () => {
     const mark = await readFile('docs/assets/skillguard-mark.svg', 'utf8');
     const og = await readFile('docs/assets/skillguard-og.svg', 'utf8');
     const demo = await readFile('docs/assets/mcp-demo.svg', 'utf8');
+    const readme = await readFile('README.md', 'utf8');
 
     expect(mark).toContain('<svg');
     expect(mark).toContain('SkillGuard');
     expect(og).toContain('AI agent instruction files are supply-chain code');
     expect(demo).toContain('mcp-remote-server');
     expect(demo).toContain('Risk:');
+    expect(readme).toContain('img.shields.io/github/stars/buzzicra/skillguard');
+    expect(readme).toContain('api.star-history.com/svg?repos=buzzicra/skillguard&type=Date');
+    expect(readme).toContain('github.com/buzzicra/skillguard/stargazers');
   });
 
   it('ships rule docs and comparison positioning', async () => {

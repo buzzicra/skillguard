@@ -6,6 +6,7 @@
 
 [![CI](https://github.com/buzzicra/skillguard/actions/workflows/skillguard.yml/badge.svg)](https://github.com/buzzicra/skillguard/actions/workflows/skillguard.yml)
 [![npm](https://img.shields.io/npm/v/@buzzicra/skillguard.svg)](https://www.npmjs.com/package/@buzzicra/skillguard)
+[![GitHub stars](https://img.shields.io/github/stars/buzzicra/skillguard?style=social)](https://github.com/buzzicra/skillguard/stargazers)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 AI agent instruction files are supply-chain code. SkillGuard scans `AGENTS.md`, skills, Cursor rules, package scripts, and MCP configs before your coding agent trusts them.
@@ -21,6 +22,10 @@ npx @buzzicra/skillguard scan . --preset strict
 Agent configs can tell an AI coding agent to read secrets, call remote URLs, bypass permissions, or run unsafe shell. SkillGuard gives those files a fast static security gate before you install, share, or merge them.
 
 Read next: [rule reference](docs/rules.md), [comparison guide](docs/comparison.md), [threat taxonomy](docs/threats.md), [launch assets](docs/launch/x-thread.md).
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=buzzicra/skillguard&type=Date)](https://www.star-history.com/#buzzicra/skillguard&Date)
 
 ## Quick Demo
 
