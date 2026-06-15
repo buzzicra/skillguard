@@ -52,7 +52,7 @@ describe('main', () => {
     const exitCode = await main(['--version'], io);
 
     expect(exitCode).toBe(0);
-    expect(readStdout()).toContain('0.1.0');
+    expect(readStdout()).toContain('0.1.1');
   });
 
   it('returns a failing exit code when risk meets --fail-on threshold', async () => {
