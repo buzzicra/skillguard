@@ -39,7 +39,7 @@ Examples:
   skillguard scan . --sarif skillguard.sarif --fail-on HIGH
 `;
 
-const packageVersion = '0.1.1';
+const packageVersion = '0.1.2';
 
 const parseRiskLevel = (value: string): RiskLevel => {
   const normalized = value.toUpperCase();
