@@ -6,3 +6,5 @@ coverage/
 .env.*
 *.log
 npm-debug.log*
+skillguard.sarif
+skillguard-report.md
