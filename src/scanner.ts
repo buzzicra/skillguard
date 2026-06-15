@@ -1,9 +1,13 @@
+import { execFile } from 'node:child_process';
 import { lstat, readdir, readFile, stat } from 'node:fs/promises';
 import { basename, extname, join, relative, resolve, sep } from 'node:path';
+import { promisify } from 'node:util';
 import { isIgnored, loadProjectConfig, type AllowEntry, type ProjectConfig } from './config.js';
 import { calculateRisk } from './risk.js';
 import { rules as builtInRules, type Rule } from './rules.js';
-import type { Finding, ScanResult, Severity, TextScanInput } from './types.js';
+import type { AgentFileType, DiscoveredAgentFile, Finding, ScanOptions, ScanResult, Severity, TextScanInput } from './types.js';
+
+const execFileAsync = promisify(execFile);
 
 const maxFileBytes = 256 * 1024;
 const maxDepth = 8;
@@ -33,19 +37,24 @@ const relevantNames = new Set([
 
 const relevantExtensions = new Set(['.md', '.json', '.jsonc', '.toml', '.yaml', '.yml']);
 
+const normalizeRelativePath = (filePath: string): string => filePath.split(sep).join('/');
+
+const isWithinPath = (filePath: string, directory: string): boolean =>
+  filePath.startsWith(`${directory}/`) || filePath.includes(`/${directory}/`);
+
 const isRelevantFile = (filePath: string): boolean => {
   const name = basename(filePath);
-  const normalized = filePath.split(sep).join('/');
+  const normalized = normalizeRelativePath(filePath);
 
   if (relevantNames.has(name)) {
     return true;
   }
 
-  if (normalized.includes('/.cursor/rules/')) {
+  if (isWithinPath(normalized, '.cursor/rules')) {
     return relevantExtensions.has(extname(name));
   }
 
-  if (normalized.includes('/skills/') || normalized.includes('/.codex/') || normalized.includes('/.claude/')) {
+  if (isWithinPath(normalized, 'skills') || isWithinPath(normalized, '.codex') || isWithinPath(normalized, '.claude')) {
     return relevantExtensions.has(extname(name));
   }
 
@@ -54,6 +63,33 @@ const isRelevantFile = (filePath: string): boolean => {
   }
 
   return false;
+};
+
+const classifyAgentFile = (filePath: string): AgentFileType => {
+  const name = basename(filePath);
+  const normalized = normalizeRelativePath(filePath);
+
+  if (name === 'AGENTS.md' || name === 'AGENT.md') {
+    return 'AGENTS';
+  }
+
+  if (name === 'SKILL.md' || isWithinPath(normalized, 'skills')) {
+    return 'Skill';
+  }
+
+  if (name === 'package.json') {
+    return 'Package';
+  }
+
+  if (name === 'mcp.json' || name === '.mcp.json' || name.endsWith('.mcp.json') || name.endsWith('.mcp.yaml') || name.endsWith('.mcp.yml')) {
+    return 'MCP config';
+  }
+
+  if (name === '.cursorrules' || isWithinPath(normalized, '.cursor/rules')) {
+    return 'Cursor rule';
+  }
+
+  return 'Agent instruction';
 };
 
 const normalizeEvidence = (line: string): string =>
@@ -95,6 +131,67 @@ const collectFiles = async (root: string, current: string, depth: number): Promi
   );
 
   return nested.flat();
+};
+
+const listChangedPaths = async (root: string, changedFrom: string): Promise<Set<string>> => {
+  try {
+    const { stdout } = await execFileAsync('git', [
+      '-C',
+      root,
+      'diff',
+      '--name-only',
+      '--diff-filter=ACMRTUXB',
+      changedFrom,
+      '--',
+    ]);
+
+    return new Set(
+      stdout
+        .toString()
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown git error';
+    throw new Error(`Unable to resolve --changed-from ${changedFrom}: ${message}`);
+  }
+};
+
+export const discoverProjectFiles = async (
+  targetPath: string = process.cwd(),
+  options: ScanOptions = {},
+): Promise<{ root: string; files: DiscoveredAgentFile[]; config: ProjectConfig }> => {
+  const root = resolve(targetPath);
+  const rootStat = await lstat(root);
+
+  if (options.changedFrom !== undefined && !rootStat.isDirectory()) {
+    throw new Error('--changed-from requires a directory target');
+  }
+
+  const config = rootStat.isDirectory()
+    ? await loadProjectConfig(root)
+    : {
+        ignore: [],
+        severityOverrides: {},
+        allow: [],
+        rules: [],
+      };
+  const discovered = rootStat.isDirectory() ? await collectFiles(root, root, 0) : [root];
+  const changedPaths = options.changedFrom === undefined ? undefined : await listChangedPaths(root, options.changedFrom);
+  const files = discovered
+    .map<DiscoveredAgentFile>((file) => {
+      const relativePath = rootStat.isDirectory() ? normalizeRelativePath(relative(root, file)) : basename(file);
+
+      return {
+        type: classifyAgentFile(relativePath),
+        path: relativePath,
+        absolutePath: file,
+      };
+    })
+    .filter((file) => changedPaths === undefined || changedPaths.has(file.path));
+
+  return { root, files, config };
 };
 
 const countBySeverity = (findings: readonly Finding[]): Partial<Record<Severity, number>> =>
@@ -170,45 +267,33 @@ export const scanText = ({ filePath, content }: TextScanInput, config: ProjectCo
   });
 };
 
-export const scanProject = async (targetPath: string = process.cwd()): Promise<ScanResult> => {
-  const root = resolve(targetPath);
-  const rootStat = await lstat(root);
-  const config = rootStat.isDirectory()
-    ? await loadProjectConfig(root)
-    : {
-        ignore: [],
-        severityOverrides: {},
-        allow: [],
-        rules: [],
-      };
-  const files = rootStat.isDirectory() ? await collectFiles(root, root, 0) : [root];
+export const scanProject = async (targetPath: string = process.cwd(), options: ScanOptions = {}): Promise<ScanResult> => {
+  const { root, files, config } = await discoverProjectFiles(targetPath, options);
   const findings: Finding[] = [];
   let filesScanned = 0;
   let filesSkipped = 0;
 
   for (const file of files) {
-    const fileStat = await stat(file);
+    const fileStat = await stat(file.absolutePath);
 
     if (fileStat.size > maxFileBytes) {
       filesSkipped += 1;
       continue;
     }
 
-    const buffer = await readFile(file);
+    const buffer = await readFile(file.absolutePath);
 
     if (buffer.includes(0)) {
       filesSkipped += 1;
       continue;
     }
 
-    const relativePath = rootStat.isDirectory() ? relative(root, file) : basename(file);
-
-    if (isIgnored(relativePath, config)) {
+    if (isIgnored(file.path, config)) {
       filesSkipped += 1;
       continue;
     }
 
-    findings.push(...scanText({ filePath: relativePath, content: buffer.toString('utf8') }, config));
+    findings.push(...scanText({ filePath: file.path, content: buffer.toString('utf8') }, config));
     filesScanned += 1;
   }
 

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -55,5 +55,25 @@ describe('initProject', () => {
       '.github/workflows/skillguard.yml',
     ]);
     await expect(readFile(join(root, '.skillguard.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('can add a pre-commit framework hook', async () => {
+    const root = await makeTempRoot();
+
+    const result = await initProject(root, { preCommit: true });
+
+    expect(result.created).toContain('.pre-commit-config.yaml');
+    expect(await readFile(join(root, '.pre-commit-config.yaml'), 'utf8')).toContain('npx @buzzicra/skillguard scan . --changed-from HEAD --fail-on HIGH');
+  });
+
+  it('uses Husky when the project already has a Husky stack', async () => {
+    const root = await makeTempRoot();
+    await mkdir(join(root, '.husky'), { recursive: true });
+
+    const result = await initProject(root, { preCommit: true });
+
+    expect(result.created).toContain('.husky/pre-commit');
+    expect(await readFile(join(root, '.husky/pre-commit'), 'utf8')).toContain('--changed-from HEAD --fail-on HIGH');
+    expect((await stat(join(root, '.husky/pre-commit'))).mode & 0o111).toBeGreaterThan(0);
   });
 });

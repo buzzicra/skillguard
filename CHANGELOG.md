@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Added `skillguard inventory` with text and JSON output.
+- Added `--changed-from <git-ref>` for PR-focused scans.
+- Added optional pre-commit hook generation through `skillguard init --pre-commit`.
+- Added a threat taxonomy and competitor-signal roadmap docs.
+
 ## 0.2.0
 
 - Added `skillguard init` for one-command project setup.

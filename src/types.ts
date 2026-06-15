@@ -44,3 +44,39 @@ export type TextScanInput = {
   filePath: string;
   content: string;
 };
+
+export type ScanOptions = {
+  changedFrom?: string;
+};
+
+export type AgentFileType =
+  | 'AGENTS'
+  | 'Skill'
+  | 'MCP config'
+  | 'Cursor rule'
+  | 'Agent instruction'
+  | 'Package';
+
+export type DiscoveredAgentFile = {
+  type: AgentFileType;
+  path: string;
+  absolutePath: string;
+};
+
+export type InventoryItem = {
+  type: AgentFileType;
+  path: string;
+  findings: number;
+  highestSeverity?: Severity;
+  ignored: boolean;
+};
+
+export type InventoryResult = {
+  root: string;
+  items: InventoryItem[];
+  summary: {
+    files: number;
+    ignored: number;
+    findings: number;
+  };
+};

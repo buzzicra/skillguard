@@ -4,20 +4,23 @@ import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { formatTextReport } from './format.js';
 import { initProject } from './init.js';
+import { formatInventoryReport, inventoryProject } from './inventory.js';
 import { formatMarkdownReport } from './markdown.js';
 import { formatSarifReport } from './sarif.js';
 import { scanProject } from './scanner.js';
 import type { RiskLevel } from './types.js';
 
 type CliOptions = {
-  command: 'scan' | 'init' | 'help' | 'version';
+  command: 'scan' | 'inventory' | 'init' | 'help' | 'version';
   targetPath: string;
   json: boolean;
   sarifPath?: string;
   markdownPath?: string;
   failOn?: RiskLevel;
+  changedFrom?: string;
   dryRun?: boolean;
   force?: boolean;
+  preCommit?: boolean;
 };
 
 type CliIo = {
@@ -35,22 +38,25 @@ const riskOrder: Record<RiskLevel, number> = {
 const usage = `SkillGuard
 
 Usage:
-  skillguard scan [path] [--json] [--sarif <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>]
+  skillguard scan [path] [--json] [--sarif <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>]
   skillguard scan [path] [--markdown <file>]
-  skillguard init [path] [--dry-run] [--force]
+  skillguard inventory [path] [--json] [--changed-from <git-ref>]
+  skillguard init [path] [--dry-run] [--force] [--pre-commit]
   skillguard --version
   skillguard --help
 
 Examples:
   skillguard scan
   skillguard scan . --fail-on HIGH
+  skillguard scan . --changed-from origin/main --fail-on HIGH
+  skillguard inventory . --json
   skillguard scan ~/.claude/skills --json
   skillguard scan . --sarif skillguard.sarif --fail-on HIGH
   skillguard scan . --markdown skillguard-report.md
-  skillguard init
+  skillguard init --pre-commit
 `;
 
-const packageVersion = '0.2.0';
+const packageVersion = '0.3.0';
 
 export const isDirectInvocation = (
   entrypoint: string | undefined = process.argv[1],
@@ -88,7 +94,7 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
 
   const [command, ...rest] = argv;
 
-  if (command !== 'scan' && command !== 'init') {
+  if (command !== 'scan' && command !== 'inventory' && command !== 'init') {
     throw new Error(`Unknown command: ${command ?? ''}`);
   }
 
@@ -97,8 +103,10 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
   let sarifPath: string | undefined;
   let markdownPath: string | undefined;
   let failOn: RiskLevel | undefined;
+  let changedFrom: string | undefined;
   let dryRun = false;
   let force = false;
+  let preCommit = false;
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
@@ -113,6 +121,11 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
       continue;
     }
 
+    if (command === 'init' && arg === '--pre-commit') {
+      preCommit = true;
+      continue;
+    }
+
     if (command === 'init' && arg?.startsWith('--') === true) {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -123,6 +136,10 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
     }
 
     if (arg === '--fail-on') {
+      if (command !== 'scan') {
+        throw new Error(`Unknown option: ${arg}`);
+      }
+
       const value = rest[index + 1];
 
       if (value === undefined) {
@@ -135,6 +152,10 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
     }
 
     if (arg === '--sarif') {
+      if (command !== 'scan') {
+        throw new Error(`Unknown option: ${arg}`);
+      }
+
       const value = rest[index + 1];
 
       if (value === undefined) {
@@ -147,6 +168,10 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
     }
 
     if (arg === '--markdown') {
+      if (command !== 'scan') {
+        throw new Error(`Unknown option: ${arg}`);
+      }
+
       const value = rest[index + 1];
 
       if (value === undefined) {
@@ -154,6 +179,18 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
       }
 
       markdownPath = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--changed-from') {
+      const value = rest[index + 1];
+
+      if (value === undefined) {
+        throw new Error('--changed-from requires a git ref');
+      }
+
+      changedFrom = value;
       index += 1;
       continue;
     }
@@ -172,8 +209,10 @@ const parseArgs = (argv: readonly string[]): CliOptions => {
     ...(sarifPath === undefined ? {} : { sarifPath }),
     ...(markdownPath === undefined ? {} : { markdownPath }),
     ...(failOn === undefined ? {} : { failOn }),
+    ...(changedFrom === undefined ? {} : { changedFrom }),
     dryRun,
     force,
+    preCommit,
   };
 };
 
@@ -198,6 +237,7 @@ export const main = async (
       const result = await initProject(options.targetPath, {
         ...(options.dryRun === undefined ? {} : { dryRun: options.dryRun }),
         ...(options.force === undefined ? {} : { force: options.force }),
+        ...(options.preCommit === undefined ? {} : { preCommit: options.preCommit }),
       });
       const created = result.created.map((path) => `Created ${path}`);
       const skipped = result.skipped.map((path) => `Skipped ${path} (already exists)`);
@@ -205,7 +245,17 @@ export const main = async (
       return 0;
     }
 
-    const result = await scanProject(options.targetPath);
+    if (options.command === 'inventory') {
+      const result = await inventoryProject(options.targetPath, {
+        ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
+      });
+      io.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${formatInventoryReport(result)}\n`);
+      return 0;
+    }
+
+    const result = await scanProject(options.targetPath, {
+      ...(options.changedFrom === undefined ? {} : { changedFrom: options.changedFrom }),
+    });
     if (options.sarifPath !== undefined) {
       await writeFile(options.sarifPath, `${JSON.stringify(formatSarifReport(result), null, 2)}\n`);
     }

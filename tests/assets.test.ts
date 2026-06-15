@@ -18,4 +18,12 @@ describe('repository assets', () => {
     expect(demo).toContain('$OPENAI_API_KEY');
     expect(demo).toContain('curl');
   });
+
+  it('ships a threat taxonomy for rule reviewers', async () => {
+    const taxonomy = await readFile('docs/threats.md', 'utf8');
+
+    expect(taxonomy).toContain('SkillGuard Threat Taxonomy');
+    expect(taxonomy).toContain('env-exfiltration');
+    expect(taxonomy).toContain('skillguard inventory .');
+  });
 });

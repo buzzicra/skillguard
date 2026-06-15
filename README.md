@@ -8,6 +8,7 @@ Security scanner for AI agent instruction files, skills, MCP configs, and coding
 
 ```bash
 npx @buzzicra/skillguard scan .
+npx @buzzicra/skillguard inventory .
 ```
 
 Agent configs are supply-chain code now. `AGENTS.md`, `CLAUDE.md`, `SKILL.md`, MCP JSON, Cursor rules, and package scripts can tell an AI coding agent to read secrets, call remote URLs, bypass permissions, or run unsafe shell. SkillGuard gives those files a fast static security gate before you install, share, or merge them.
@@ -39,10 +40,16 @@ Generate a shareable review:
 npx @buzzicra/skillguard scan . --markdown skillguard-report.md
 ```
 
+Scan only changed agent files in a PR branch:
+
+```bash
+npx @buzzicra/skillguard scan . --changed-from origin/main --fail-on HIGH
+```
+
 Create config and GitHub code-scanning workflow:
 
 ```bash
-npx @buzzicra/skillguard init
+npx @buzzicra/skillguard init --pre-commit
 ```
 
 ## Why SkillGuard
@@ -51,7 +58,13 @@ npx @buzzicra/skillguard init
 - Runs locally with no network calls from the scanner.
 - Emits text, JSON, Markdown, and SARIF.
 - Works in CI and uploads SARIF to GitHub code scanning.
+- Inventories the repo's agent surface before scanning.
+- Supports PR-mode scans with `--changed-from <git-ref>`.
 - Supports repo-specific ignores, allow rules, severity overrides, and custom regex rules.
+
+## Direction
+
+SkillGuard is intentionally narrower than broad agent-security platforms. The goal is to be the npm-native, no-token, non-executing security gate for checked-in agent instructions. See [competitor signals](docs/research/2026-06-15-agent-security-competitors.md), the [v0.3 differentiation plan](docs/plans/2026-06-15-skillguard-v0.3-differentiation.md), and the [threat taxonomy](docs/threats.md).
 
 ## What It Finds
 
@@ -85,8 +98,9 @@ skillguard scan .
 ## Usage
 
 ```bash
-skillguard scan [path] [--json] [--sarif <file>] [--markdown <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>]
-skillguard init [path] [--dry-run] [--force]
+skillguard scan [path] [--json] [--sarif <file>] [--markdown <file>] [--fail-on <LOW|MEDIUM|HIGH|CRITICAL>] [--changed-from <git-ref>]
+skillguard inventory [path] [--json] [--changed-from <git-ref>]
+skillguard init [path] [--dry-run] [--force] [--pre-commit]
 skillguard --version
 ```
 
@@ -96,9 +110,11 @@ Examples:
 skillguard scan
 skillguard scan ~/.claude/skills --json
 skillguard scan . --fail-on HIGH
+skillguard scan . --changed-from origin/main --fail-on HIGH
+skillguard inventory . --json
 skillguard scan . --sarif skillguard.sarif --fail-on HIGH
 skillguard scan . --markdown skillguard-report.md
-skillguard init --dry-run
+skillguard init --dry-run --pre-commit
 ```
 
 ## GitHub Actions
@@ -108,6 +124,7 @@ skillguard init --dry-run
 - `.skillguard.json`
 - `.skillguardignore`
 - `.github/workflows/skillguard.yml`
+- optional `.pre-commit-config.yaml` or `.husky/pre-commit` when `--pre-commit` is used
 
 Workflow template:
 
@@ -141,6 +158,36 @@ jobs:
 ```
 
 GitHub code scanning needs SARIF upload support on the target repo.
+
+## Inventory And PR Mode
+
+Use inventory to review the repo's agent attack surface before scanning:
+
+```bash
+skillguard inventory .
+```
+
+Example output:
+
+```text
+Inventory: 3 agent files
+Ignored: 0
+Findings: 1
+
+Type        Path                  Findings  Highest  Ignored
+----------  --------------------  --------  -------  -------
+AGENTS      AGENTS.md             1         HIGH     no
+Skill       skills/deploy/SKILL.md 0        -        no
+MCP config  .mcp.json             0         -        no
+```
+
+Use `--changed-from` to scan only changed agent-surface files in a branch:
+
+```bash
+skillguard scan . --changed-from origin/main --fail-on HIGH
+```
+
+This keeps mature repos usable when old warnings exist but new PRs should not add risk.
 
 ## Configuration
 
