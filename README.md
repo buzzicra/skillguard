@@ -1,19 +1,26 @@
 # SkillGuard
 
+<p align="center">
+  <img src="docs/assets/skillguard-mark.svg" alt="SkillGuard logo" width="112">
+</p>
+
 [![CI](https://github.com/buzzicra/skillguard/actions/workflows/skillguard.yml/badge.svg)](https://github.com/buzzicra/skillguard/actions/workflows/skillguard.yml)
 [![npm](https://img.shields.io/npm/v/@buzzicra/skillguard.svg)](https://www.npmjs.com/package/@buzzicra/skillguard)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Security scanner for AI agent instruction files, skills, MCP configs, and coding-agent rules.
+AI agent instruction files are supply-chain code. SkillGuard scans `AGENTS.md`, skills, Cursor rules, package scripts, and MCP configs before your coding agent trusts them.
 
 ```bash
-npx @buzzicra/skillguard scan .
 npx @buzzicra/skillguard scan . --preset strict
-npx @buzzicra/skillguard inventory .
-npx @buzzicra/skillguard baseline . --output skillguard.lock.json
 ```
 
-Agent configs are supply-chain code now. `AGENTS.md`, `CLAUDE.md`, `SKILL.md`, MCP JSON, Cursor rules, and package scripts can tell an AI coding agent to read secrets, call remote URLs, bypass permissions, or run unsafe shell. SkillGuard gives those files a fast static security gate before you install, share, or merge them.
+<p align="center">
+  <img src="docs/assets/mcp-demo.svg" alt="SkillGuard MCP scan demo" width="860">
+</p>
+
+Agent configs can tell an AI coding agent to read secrets, call remote URLs, bypass permissions, or run unsafe shell. SkillGuard gives those files a fast static security gate before you install, share, or merge them.
+
+Read next: [rule reference](docs/rules.md), [comparison guide](docs/comparison.md), [threat taxonomy](docs/threats.md), [launch assets](docs/launch/x-thread.md).
 
 ## Quick Demo
 
@@ -21,6 +28,7 @@ Scan intentionally unsafe sample:
 
 ```bash
 npx @buzzicra/skillguard scan examples/bad-skill
+npx @buzzicra/skillguard scan examples/bad-mcp --preset strict
 ```
 
 Output:
@@ -79,6 +87,17 @@ npx @buzzicra/skillguard init --pre-commit
 - Creates lockfile baselines and detects trust drift over time.
 - Supports `default`, `oss`, and `strict` presets for different false-positive budgets.
 - Supports repo-specific ignores, allow rules, severity overrides, and custom regex rules.
+
+## Why Not Existing Scanners
+
+| Tool category | Strong at | SkillGuard adds |
+| --- | --- | --- |
+| Dependency scanners | Package graph risk | Agent instruction layer and MCP trust surface |
+| Secret scanners | Hardcoded token shapes | Secret env passed into MCP and agent workflows |
+| Code scanners | Application source patterns | Prompt, skill, Cursor rule, and MCP config semantics |
+| Runtime agent platforms | Live approvals and logs | Pre-merge static review before install |
+
+See the full [comparison guide](docs/comparison.md).
 
 ## Direction
 
@@ -166,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: buzzicra/skillguard@v0.5.0
+      - uses: buzzicra/skillguard@v0.5.1
         with:
           preset: strict
           fail-on: HIGH

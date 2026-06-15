@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Added launch-ready visual assets for README, social previews, and MCP scan screenshots.
+- Added `docs/rules.md` with preset coverage, examples, and remediation guidance.
+- Added `docs/comparison.md` to explain where SkillGuard fits beside dependency, secret, and code scanners.
+- Added `examples/bad-mcp/.mcp.json` for repeatable MCP demo screenshots.
+
 ## 0.5.0
 
 - Added structured MCP config analysis for unpinned package launchers, secret env exposure, dangerous commands, remote endpoints, and broad filesystem mounts.

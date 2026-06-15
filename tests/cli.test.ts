@@ -53,7 +53,7 @@ describe('main', () => {
     const exitCode = await main(['--version'], io);
 
     expect(exitCode).toBe(0);
-    expect(readStdout()).toContain('0.5.0');
+    expect(readStdout()).toContain('0.5.1');
   });
 
   it('detects direct execution through npm bin symlinks', async () => {

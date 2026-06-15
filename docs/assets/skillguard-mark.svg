@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="SkillGuard logo">
+  <title>SkillGuard</title>
+  <rect width="256" height="256" rx="48" fill="#0b1020"/>
+  <path d="M128 28 204 58v56c0 53-30 91-76 114-46-23-76-61-76-114V58l76-30Z" fill="#16a34a"/>
+  <path d="M128 47 187 70v45c0 39-21 68-59 88-38-20-59-49-59-88V70l59-23Z" fill="#ecfdf5"/>
+  <path d="M92 126h72v20H92v-20Zm0-42h72v20H92V84Zm0 84h50v20H92v-20Z" fill="#0b1020"/>
+  <path d="M169 159l13 13 30-34 15 13-44 49-28-28 14-13Z" fill="#16a34a"/>
+</svg>
